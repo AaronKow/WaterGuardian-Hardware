@@ -38,13 +38,13 @@ char* device_token = "<YOUR DEVICE TOKEN>";		// 48f6ad75-b046-4858-9ea5-a7fefe1a
 If you have GCC compiler in your machine, you can compile it with command:
 
 ```sh
-gcc final_code.c -o water_guardian -lcurl -pthread
+$ gcc final_code.c -o water_guardian -lcurl -pthread
 ```
 
 cURL and threading are used in this source code. Thus, the external library flags for curl and thread are used. In order to run the execution file can be as:
 
 ```sh
-./water_guardian 16 21 22
+$ ./water_guardian 16 21 22
 ```
 
 The c execution file need to take 3 extra flags during execution. The number 16, 21, and 22 represent the pin 11, 12, 13 for Artik 10, hardware documentation [here](https://developer.artik.io/documentation/developer-guide/gpio-mapping.html). There three here represent the pins used to read the flow water sensor 1, flow water sensor 2, and flow water sensor 3. The reason the coding is coded this way to give the freedom for developers to choose any port they convenient for prototyping.
@@ -55,7 +55,7 @@ Below is the scematic diagram designed for WaterGuardian:
 
 ## Hardware Appearance
 Below is the hardware appearance for WaterGuardian:
-![WaterGuardian Hardware](https://raw.githubusercontent.com/AaronKow/WaterGuardian-Hardware/master/Images/WaterGuardian_Hardware.png)
+![WaterGuardian Hardware](https://raw.githubusercontent.com/AaronKow/WaterGuardian-Hardware/master/Images/WaterGuardian_Hardware.jpg)
 
 ## PCB Layout
 The PCB used in this project is a type of Positive Acting Presensitized PCB. This PCB layout is designed using the software called DipTrace in freeware version. PCB layout of this project can be found in folder named "PCB" of this repo. The layout can be seen below:
