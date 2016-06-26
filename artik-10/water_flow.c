@@ -18,8 +18,9 @@ float timedifference_msec(struct timeval t0, struct timeval t1){
     return (t1.tv_sec - t0.tv_sec) * 1000.0f + (t1.tv_usec - t0.tv_usec) / 1000.0f;
 }
 
+// this function needs to work with interrupt_func in order to complete the readings for water flow sensor
 void *get_water_sensor(void *arguments){
-        sleep(1);                          	// sleep for 1 second after the interrupt start to prevent error
+        sleep(1);             // sleep for 1 second after the interrupt start to prevent error of this function
 
         pulse_count_1 = 0;
         pulse_count_2 = 0;
@@ -41,50 +42,55 @@ void *get_water_sensor(void *arguments){
         ml_total_2 = 0;
         ml_total_3 = 0;
 
-        calibration_factor = 5.0;                                                                   // set your pulse frequency here, reference is 4.5
+        calibration_factor = 5.0;         // set the pulse frequency here, reference is 4.5
 
-        gettimeofday(&oldTime, 0);
+        gettimeofday(&oldTime, 0);        // set the base time
 
         /*========================*/
         /* Calculating Water Flow */
         /*========================*/
         while(1){
-                gettimeofday(&currentTime, 0);
+                gettimeofday(&currentTime, 0);    // set the current time
                 elapsed = timedifference_msec(oldTime, currentTime);
-                if (elapsed > 1000){                                                                // check every 1 second
-                    gettimeofday(&oldTime, 0);                                                      // update current time
+                if (elapsed > 1000){              // check every 1 second
+                    gettimeofday(&oldTime, 0);    // update base time
                     flow_rate_1 = ((1000.0 / (elapsed)) * pulse_count_1) / calibration_factor;
                     flow_rate_2 = ((1000.0 / (elapsed)) * pulse_count_2) / calibration_factor;
                     flow_rate_3 = ((1000.0 / (elapsed)) * pulse_count_3) / calibration_factor;
 
-                    if(flow_rate_1 >= 11.0) flow_rate_1 = previous_rate_1;                          // calibration for water_sensor 1 if suddently exceed normal value
-                    if(flow_rate_2 >= 11.0) flow_rate_2 = previous_rate_2;                          // calibration for water_sensor 2 if suddently exceed normal value
-                    if(flow_rate_3 >= 11.0) flow_rate_3 = previous_rate_3;                          // calibration for water_sensor 3 if suddently exceed normal value
+                    // calibration for all water_sensors if suddenly exceed normal value
+                    // to prevent unstable of water data result
+                    if(flow_rate_1 >= 11.0) flow_rate_1 = previous_rate_1;
+                    if(flow_rate_2 >= 11.0) flow_rate_2 = previous_rate_2;
+                    if(flow_rate_3 >= 11.0) flow_rate_3 = previous_rate_3;
 
+                    // to get millilitre reading
                     ml_1 = (flow_rate_1 / 60) * 1000;
                     ml_total_1 += ml_1;
-
                     ml_2 = (flow_rate_2 / 60) * 1000;
                     ml_total_2 += ml_2;
-
                     ml_3 = (flow_rate_3 / 60) * 1000;
                     ml_total_3 += ml_3;
 
-                    allowCURL = true;                                                               // only allow data to be cURL when data is correct
+                    // only allow data to be cURL when data is correct
+                    allowCURL = true;
 
+                    // for debug
                     // printf("Flow rate 1: %f L/min; Current Liquid Flowing: %f ml/sec; Output Liquid Quantity: %f ml\n", flow_rate_1, ml_1, ml_total_1);
                     // printf("Flow rate 2: %f L/min; Current Liquid Flowing: %f ml/sec; Output Liquid Quantity: %f ml\n", flow_rate_2, ml_2, ml_total_2);
                     // printf("Flow rate 3: %f L/min; Current Liquid Flowing: %f ml/sec; Output Liquid Quantity: %f ml\n\n", flow_rate_3, ml_3, ml_total_3);
 
+                    // set all previous rate to current rate
                     previous_rate_1 = flow_rate_1;
                     previous_rate_2 = flow_rate_2;
                     previous_rate_3 = flow_rate_3;
 
-                    pulse_count_1 = 0;                                                              // Reset Counter
-                    pulse_count_2 = 0;                                                              // Reset Counter
-                    pulse_count_3 = 0;                                                              // Reset Counter
+                    // Reset all Pulse Counters
+                    pulse_count_1 = 0;
+                    pulse_count_2 = 0;
+                    pulse_count_3 = 0;
 
-                    allowCURL = false;                                                              // don't allow data to be cURL after pulse count is reset
+                    allowCURL = false;                // don't allow data to be cURL after pulse count is reset
                 }
                 usleep(100);
         }
@@ -93,83 +99,93 @@ void *get_water_sensor(void *arguments){
 }
 
 void *interrupt_func(void *arguments){
+        // get the pins from arguments
         struct gpio_struct *args = arguments;
         unsigned int gpio_1 = args -> gpio_1;
         unsigned int gpio_2 = args -> gpio_2;
         unsigned int gpio_3 = args -> gpio_3;
 
+        // set the polling required for the interrupt
         struct pollfd fdset[4];
-        int nfds = 4;                                                                                                                           // number of pollfd structures in the fds array
+        int nfds = 4;                                     // number of pollfd structures in the fds array
         int gpio_fd1, gpio_fd2, gpio_fd3, timeout, rc;
         char *buf[MAX_BUF];
         int len;
-
-        gpio_export(gpio_1);
-        gpio_set_dir(gpio_1, 0);                                                                                                                // set pin to input
-        gpio_set_value(gpio_1, 1);
-        gpio_set_edge(gpio_1, "falling");                                                                                               // set with falling interrupt
-
-        gpio_export(gpio_2);
-        gpio_set_dir(gpio_2, 0);                                                                                                                // set pin to input
-        gpio_set_value(gpio_2, 1);
-        gpio_set_edge(gpio_2, "falling");                                                                                               // set with falling interrupt
-
-        gpio_export(gpio_3);
-        gpio_set_dir(gpio_3, 0);                                                                                                                // set pin to input
-        gpio_set_value(gpio_3, 1);
-        gpio_set_edge(gpio_3, "falling");                                                                                               // set with falling interrupt
-
-
-        gpio_fd1 = gpio_fd_open(gpio_1);                                                             // the open file descriptor for GPIO pin
-        gpio_fd2 = gpio_fd_open(gpio_2);                                                             // the open file descriptor for GPIO pin
-        gpio_fd3 = gpio_fd_open(gpio_3);                                                             // the open file descriptor for GPIO pin
-
         timeout = POLL_TIMEOUT;
 
-        while (1) {
-                memset((void*)fdset, 0, sizeof(fdset));                                              // clears the fdset block of memory
+        // setup for Water Flow Sensor 1
+        gpio_export(gpio_1);
+        gpio_set_dir(gpio_1, 0);                          // set pin to input
+        gpio_set_value(gpio_1, 1);
+        gpio_set_edge(gpio_1, "falling");                 // set with falling edge interrupt
 
+        // setup for Water Flow Sensor 2
+        gpio_export(gpio_2);
+        gpio_set_dir(gpio_2, 0);                          // set pin to input
+        gpio_set_value(gpio_2, 1);
+        gpio_set_edge(gpio_2, "falling");                 // set with falling edge interrupt
+
+        // setup for Water Flow Sensor 3
+        gpio_export(gpio_3);
+        gpio_set_dir(gpio_3, 0);                          // set pin to input
+        gpio_set_value(gpio_3, 1);
+        gpio_set_edge(gpio_3, "falling");                 // set with falling edge interrupt
+
+
+        // open file descriptor for GPIO pins
+        gpio_fd1 = gpio_fd_open(gpio_1);
+        gpio_fd2 = gpio_fd_open(gpio_2);
+        gpio_fd3 = gpio_fd_open(gpio_3);
+
+        while (1) {
+                memset((void*)fdset, 0, sizeof(fdset));   // clears the fdset block of memory
+
+                // set fdset pointing to the respective file and event
                 fdset[0].fd = STDIN_FILENO;
                 fdset[0].events = POLLIN;
-
                 fdset[1].fd = gpio_fd1;
                 fdset[1].events = POLLPRI;
-
                 fdset[2].fd = gpio_fd2;
                 fdset[2].events = POLLPRI;
-
                 fdset[3].fd = gpio_fd3;
                 fdset[3].events = POLLPRI;
 
+                // start the polling
                 rc = poll(fdset, nfds, timeout);
 
-                if (rc < 0) {                                                                                                                   // if poll is unsuccessful, stop thread
+                // if poll is unsuccessful, stop thread
+                if (rc < 0) {
                         printf("\npoll() failed!\n");
 
                         pthread_exit(NULL);
                         return NULL;
                 }
 
-                if (rc == 0) {                                                                                                                  // if poll returns 0 then call timed out, loop again in this case
-                        // printf("Responding ...\n");
+                // if poll returns 0 then call timed out, loop again in this case
+                if (rc == 0) {
+                        printf("Responding ...\n");   // let users know that the interrupt actually responding
                 }
 
+                // interrupt for Water Flow Sensor 1
                 if (fdset[1].revents & POLLPRI) {
                         len = read(fdset[1].fd, buf, MAX_BUF);
                         flow_1();
                 }
 
+                // interrupt for Water Flow Sensor 2
                 if (fdset[2].revents & POLLPRI) {
                         len = read(fdset[2].fd, buf, MAX_BUF);
                         flow_2();
                 }
 
+                // interrupt for Water Flow Sensor 3
                 if (fdset[3].revents & POLLPRI) {
                         len = read(fdset[3].fd, buf, MAX_BUF);
                         flow_3();
                 }
 
-                if (fdset[0].revents & POLLIN) {                                                                                // keyboard input from the terminal to stop this program
+                // Press "ENTER" in the terminal to stop this program
+                if (fdset[0].revents & POLLIN) {
                         (void)read(fdset[0].fd, buf, 1);
 
                         gpio_fd_close(gpio_fd1);
@@ -194,6 +210,6 @@ void *interrupt_func(void *arguments){
                         return NULL;
                 }
 
-                fflush(stdout);                                                                                                                 // flash the standard output and keep looping until we freeze the program ^c
+                fflush(stdout);    // flash the standard output and keep looping until we freeze the program ^c
         }
 }

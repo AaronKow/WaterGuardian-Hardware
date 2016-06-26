@@ -17,7 +17,7 @@ struct timeval currentTime, oldTime;
 volatile int pulse_count_1;
 volatile int pulse_count_2;
 volatile int pulse_count_3;
-float ml_1, ml_2, ml_3;                                         // millilitre
+float ml_1, ml_2, ml_3;                         // millilitre
 float ml_total_1, ml_total_2, ml_total_3;       // total millilitre
 float elapsed, calibration_factor, flow_rate_1, flow_rate_2, flow_rate_3, previous_rate_1, previous_rate_2, previous_rate_3;
 float timedifference_msec(struct timeval t0, struct timeval t1);

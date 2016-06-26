@@ -1,8 +1,8 @@
 #include "curl_water.h"
 
-char* url = "http://192.168.43.85:3000/sensordata";                             // http://192.168.0.106:3000/sensordata
-char* remoteUrl = "http://192.168.43.85:3000/remotestate";                      // http://192.168.0.106:3000/remotestate
-char* device_id = "cJufJNZ5vBJksYbfj";                                         // uWqgZon962M3XoFZk
+char* url = "http://192.168.43.85:3000/sensordata";           // 192.168.0.106:3000/sensordata
+char* remoteUrl = "http://192.168.43.85:3000/remotestate";    // 192.168.0.106:3000/remotestate
+char* device_id = "cJufJNZ5vBJksYbfj";
 char* device_token = "6fd7b32d-9b26-4956-b973-f0fcf4e9d27e";
 
 void remote_state_debug(void){
@@ -46,7 +46,6 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, voi
 void curlWaterGuardian(char* sensor_locate, float water_data, float l_min_data, float l_hour_data){
         CURL *curl;
         CURLcode res;
-        // printf("cURL in progress ... \n");
 
         curl = curl_easy_init();  // get a curl handle
 
@@ -55,8 +54,8 @@ void curlWaterGuardian(char* sensor_locate, float water_data, float l_min_data, 
             char bearer[60]="";
             requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json");
 
-                char requestBody[256]="";
-        sprintf(requestBody, "{\n\"id\":\"%s\",\n\"token\":\"%s\",\n\"sensor_locate\":\"%s\",\n\"water_data\":\"%f\",\n\"l_min_data\":\"%f\",\n\"l_hour_data\":\"%f\"\n}" , device_id, device_token, sensor_locate, water_data, l_min_data, l_hour_data);
+            char requestBody[256]="";
+            sprintf(requestBody, "{\n\"id\":\"%s\",\n\"token\":\"%s\",\n\"sensor_locate\":\"%s\",\n\"water_data\":\"%f\",\n\"l_min_data\":\"%f\",\n\"l_hour_data\":\"%f\"\n}" , device_id, device_token, sensor_locate, water_data, l_min_data, l_hour_data);
 
             curl_easy_setopt(curl, CURLOPT_URL, url);                 // CURLOPT_URL = URL to work on
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, requestHeader);    // CURLOPT_HTTPHEADER = Custom HTTP headers
@@ -73,9 +72,10 @@ void curlWaterGuardian(char* sensor_locate, float water_data, float l_min_data, 
 }
 
 void *cURL_data(void *arguments){
-        signal2_checker = false;
-        signal3_checker = false;
-        signal4_checker = false;
+        // to prevent sending redundant water data during the water flow is stopped
+        signal2_checker = false;    // for water closet
+        signal3_checker = false;    // for bathroom
+        signal4_checker = false;    // for kitchen
 
         while(1){
             if(signal2 == '1'){
@@ -145,17 +145,13 @@ void *get_remote_state(void *arguments){
               curl_easy_strerror(res));
     }
     else {
-      // printf("Data Received: %s\n", chunk.memory);
       signal2 = chunk.memory[0];
       signal3 = chunk.memory[2];
       signal4 = chunk.memory[4];
-      // printf("%lu bytes retrieved\n", (long)chunk.size);
     }
     curl_easy_cleanup(curl_handle);
     free(chunk.memory);
     curl_global_cleanup();
-    // usleep(20);
-    // remote_state_debug();
 
     sleep(1);
   }

@@ -18,7 +18,7 @@ int pump_setup(void){
         gpio_export(waterLVL4);
         gpio_set_dir(waterLVL4, INPUT);
 
-        /* HIGH is off, LOW is on in current relay module */
+        /* HIGH is off, LOW is on in relay module */
         gpio_set_value(valve2Pin, HIGH);
         gpio_set_value(valve3Pin, HIGH);
         gpio_set_value(valve4Pin, HIGH);
@@ -28,54 +28,53 @@ int pump_setup(void){
 }
 
 void pump2_logic(void){
+  // set the checker to prevent redundant gpio_set_value
   bool valve2AllowFlow = true;
   bool valve3AllowFlow = true;
   bool valve4AllowFlow = true;
   bool stopAllFlow = false;
+
   while(1){
         if((signal2 == '0') && (signal3 == '0') && (signal4 == '0') && stopAllFlow){
+                // turn OFF all the valves and pump 2
+                gpio_set_value(valve2Pin, HIGH);
+                gpio_set_value(valve3Pin, HIGH);
+                gpio_set_value(valve4Pin, HIGH);
                 gpio_set_value(pump2Pin, HIGH);
-                gpio_set_value(pump3Pin, HIGH);
-                gpio_set_value(pump4Pin, HIGH);
-                gpio_set_value(pump2Pin, HIGH);                  // turn off pump 2
-                // printf("!!! Stop all flow !!!");
                 stopAllFlow = false;
         }
         if(signal2 == '0' && !valve2AllowFlow){
+                // turn OFF valve2 only
                 gpio_set_value(valve2Pin, HIGH);
                 valve2AllowFlow = true;
-                // printf(" >> Turn off Water Closet <<\n");
         }
         if(signal3 == '0' && !valve3AllowFlow){
+                // turn OFF valve3 only
                 gpio_set_value(valve3Pin, HIGH);
                 valve3AllowFlow = true;
-                // printf(" >> Turn off Bathroom <<\n");
         }
         if(signal4 == '0' && !valve4AllowFlow){
+                // turn OFF valve4 only
                 gpio_set_value(valve4Pin, HIGH);
                 valve4AllowFlow = true;
-                // printf(" >> Turn off Kitchen <<\n");
         }
         if(signal2 == '1' && valve2AllowFlow){
-                gpio_set_value(valve2Pin, LOW);                 // turn on valve 2
-                gpio_set_value(pump2Pin, LOW);                  // turn on pump 2
+                gpio_set_value(valve2Pin, LOW);      // turn on valve 2
+                gpio_set_value(pump2Pin, LOW);       // turn on pump 2
                 valve2AllowFlow = false;
                 stopAllFlow = true;
-                // printf(" >> Turn on Water Closet <<\n");
         }
         if(signal3 == '1' && valve3AllowFlow){
-                gpio_set_value(valve3Pin, LOW);                 // turn on valve 3
-                gpio_set_value(pump2Pin, LOW);                  // turn on pump 3
+                gpio_set_value(valve3Pin, LOW);      // turn on valve 3
+                gpio_set_value(pump2Pin, LOW);       // turn on pump 3
                 valve3AllowFlow = false;
                 stopAllFlow = true;
-                // printf(" >> Turn on Bathroom <<\n");
         }
         if(signal4 == '1' && valve4AllowFlow){
-                gpio_set_value(valve4Pin, LOW);                 // turn on valve 3
-                gpio_set_value(pump2Pin, LOW);                  // turn on pump 3
+                gpio_set_value(valve4Pin, LOW);      // turn on valve 3
+                gpio_set_value(pump2Pin, LOW);       // turn on pump 3
                 valve4AllowFlow = false;
                 stopAllFlow = true;
-                // printf(" >> Turn on Kitchen <<\n");
         }
         sleep(1);
   }
